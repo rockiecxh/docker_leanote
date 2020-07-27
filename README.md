@@ -3,10 +3,11 @@ x64版本蚂蚁笔记leanote的docker，x64版本蚂蚁笔记leanote的docker，
 
 ## 更新日志Change Log
 * 20191110 首次发布镜像
+* 20200727 添加pdf导出支持
 
 ## 使用Usage
 ```
-docker run -d --name leanote --restart=always -m 512M --cpus=1 -e SITEURL="[访问网址/IP+端口]" -e LANG="zh-cn" -e DAYS="3" -p 8080:9000 -v [宿主机储存路径]/leanotedata:/data hjh142857/leanote
+docker run -d --name leanote --restart=always -m 512M --cpus=1 -e SITEURL="[访问网址/IP+端口]" -e LANG="zh-cn" -e DAYS="3" -p 8080:9000 -v [宿主机储存路径]/leanotedata:/data tiger7456/leanote
 ```
 *  管理员用户：admin / abc123
 *  体验用户：demo@leanote.com / demo@leanote.com

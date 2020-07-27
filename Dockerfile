@@ -1,16 +1,12 @@
-FROM mongo
+FROM mongo:4.2.7-bionic
+MAINTAINER zcw
+ENV TZ=Asia/Shanghai
 
-# Preparing
-ENV SITEURL=http://localhost:9000
-ENV ADMINUSER=admin
-ENV LANG=en-us
-ENV DAYS=3
-COPY leanote-linux-amd64-v2.6.1.bin.tar.gz /data/
-COPY entrypoint.sh /usr/local/bin/
-
+ADD run.sh /root/
 RUN set -ex; \
     apt-get update; \
     apt-get install -y --no-install-recommends wget tar vim; \
+    # install font
     apt-get install -y xvfb libXrender* libfontconfig*; \
     apt-get install -y \
         fonts-arphic-bkai00mp \
@@ -22,34 +18,23 @@ RUN set -ex; \
         ttf-wqy-zenhei \
         ttf-wqy-microhei \
         xfonts-wqy; \
-        xfonts-75dpi; \
-    apt purge -y wkhtmltopdf; \
-    wget https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/0.12.5/wkhtmltox_0.12.5-1.jessie_amd64.deb; \
-    dpkg -i wkhtmltox_0.12.5-1.jessie_amd64.deb; \
-    rm -f wkhtmltox_0.12.5-1.jessie_amd64.deb;\
     rm -rf /var/lib/apt/lists/*; \
+    # download wkhtmltopdf
+    wget https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/0.12.4/wkhtmltox-0.12.4_linux-generic-amd64.tar.xz; \
+    tar -xvf wkhtmltox-0.12.4_linux-generic-amd64.tar.xz; \
+    cp wkhtmltox/bin/wkhtmltopdf /usr/local/bin/wkhtmltopdf; \
+    chmod +x /usr/local/bin/wkhtmltopdf; \
+    rm -rf wkhtmltox wkhtmltox-0.12.4_linux-generic-amd64.tar.xz ;\
+    #download leanote
+    wget https://static.axboy.cn/leanote/leanote-linux-amd64-v2.6.1.bin.tar.gz -O /root/leanote.tar.gz; \
+    tar -xzf /root/leanote.tar.gz -C /root/ ;\
+    rm -f /root/leanote.tar.gz ;\
+    chmod a+x /root/run.sh ;\
+    chmod a+x /root/leanote/bin/run.sh ;\
+    echo 'export QT_QPA_PLATFORM=offscreen' >> ~/.bashrc ;\
+    ln -snf /usr/share/zoneinfo/$TZ /etc/localtime ;\
+    echo $TZ > /etc/timezone
 
-# Leanote Installing
-RUN tar zxf /data/leanote-linux-amd64-v2.6.1.bin.tar.gz -C /data/; \
-        mkdir /data_tmp; \
-        mv /data/leanote-linux-amd64-v2.6.1.bin.tar.gz /data_tmp/leanote-linux-amd64-v2.6.1.bin.tar.gz; \
-        chmod a+x /data/leanote/bin/run.sh; \
-        # Security Setting on Leanote Wiki
-        SECRET="`cat /dev/urandom | tr -dc A-Za-z0-9 | head -c64 | sed 's/[ \r\b]/a/g'`"; \
-        sed -i "s/V85ZzBeTnzpsHyjQX4zukbQ8qqtju9y2aDM55VWxAH9Qop19poekx3xkcDVvrD0y/$SECRET/g" /data/leanote/conf/app.conf; \
-        # Timezone Setting
-        rm -f /etc/localtime; \
-        ln -s /usr/share/zoneinfo/Asia/Shanghai /etc/localtime; \
-        rm -f /etc/timezone; \
-        echo "Asia/Shanghai" >> /etc/timezone; \
-        # Backup & Restore DIR
-        mkdir /data/backup; \
-        mkdir /data/restore; \
-        # Script Initializing
-        chmod a+x /usr/local/bin/entrypoint.sh
-
-# Port Setting
-EXPOSE 9000
-
-# Script
-ENTRYPOINT ["entrypoint.sh"]
+EXPOSE 9000 27017
+# CMD ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone && /bin/bash /root/run.sh
+CMD /bin/bash /root/run.sh

@@ -1,8 +1,40 @@
-FROM mongo:4.2.7-bionic
-MAINTAINER zcw
-ENV TZ=Asia/Shanghai
+FROM mongo
 
-ADD run.sh /root/
+# Preparing
+ENV SITEURL=http://localhost:9000
+ENV ADMINUSER=admin
+ENV LANG=zh-cn
+ENV DAYS=3
+
+COPY leanote-linux-amd64-v2.6.1.bin.tar.gz /data/
+COPY wkhtmltox-0.12.4_linux-generic-amd64.tar.gz /data/
+COPY entrypoint.sh /usr/local/bin/
+# Leanote Installing
+RUN tar zxf /data/leanote-linux-amd64-v2.6.1.bin.tar.gz -C /data/; \
+        mkdir /data_tmp; \
+        mv /data/leanote-linux-amd64-v2.6.1.bin.tar.gz /data_tmp/leanote-linux-amd64-v2.6.1.bin.tar.gz; \
+        chmod a+x /data/leanote/bin/run.sh; \
+        # Security Setting on Leanote Wiki
+        SECRET="`cat /dev/urandom | tr -dc A-Za-z0-9 | head -c64 | sed 's/[ \r\b]/a/g'`"; \
+        sed -i "s/V85ZzBeTnzpsHyjQX4zukbQ8qqtju9y2aDM55VWxAH9Qop19poekx3xkcDVvrD0y/$SECRET/g" /data/leanote/conf/app.conf; \
+        # Timezone Setting
+        rm -f /etc/localtime; \
+        ln -s /usr/share/zoneinfo/Asia/Shanghai /etc/localtime; \
+        rm -f /etc/timezone; \
+        echo "Asia/Shanghai" >> /etc/timezone; \
+        # Backup & Restore DIR
+        mkdir /data/backup; \
+        mkdir /data/restore; \
+        # Script Initializing
+        chmod a+x /usr/local/bin/entrypoint.sh
+
+        # download wkhtmltopdf
+RUN tar zxf /data/wkhtmltox-0.12.4_linux-generic-amd64.tar.gz -C /; \
+        ls -l /wkhtmltox; \
+        mv /data/wkhtmltox-0.12.4_linux-generic-amd64.tar.gz /data_tmp/wkhtmltox-0.12.4_linux-generic-amd64.tar.gz; \
+        cp /wkhtmltox/bin/wkhtmltopdf /usr/bin/wkhtmltopdf; \
+        chmod +x /usr/bin/wkhtmltopdf; 
+
 RUN set -ex; \
     apt-get update; \
     apt-get install -y --no-install-recommends wget tar vim; \
@@ -18,23 +50,20 @@ RUN set -ex; \
         ttf-wqy-zenhei \
         ttf-wqy-microhei \
         xfonts-wqy; \
-    rm -rf /var/lib/apt/lists/*; \
-    # download wkhtmltopdf
-    wget https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/0.12.4/wkhtmltox-0.12.4_linux-generic-amd64.tar.xz; \
-    tar -xvf wkhtmltox-0.12.4_linux-generic-amd64.tar.xz; \
-    cp wkhtmltox/bin/wkhtmltopdf /usr/local/bin/wkhtmltopdf; \
-    chmod +x /usr/local/bin/wkhtmltopdf; \
-    rm -rf wkhtmltox wkhtmltox-0.12.4_linux-generic-amd64.tar.xz ;\
-    #download leanote
-    wget https://static.axboy.cn/leanote/leanote-linux-amd64-v2.6.1.bin.tar.gz -O /root/leanote.tar.gz; \
-    tar -xzf /root/leanote.tar.gz -C /root/ ;\
-    rm -f /root/leanote.tar.gz ;\
-    chmod a+x /root/run.sh ;\
-    chmod a+x /root/leanote/bin/run.sh ;\
-    echo 'export QT_QPA_PLATFORM=offscreen' >> ~/.bashrc ;\
-    ln -snf /usr/share/zoneinfo/$TZ /etc/localtime ;\
-    echo $TZ > /etc/timezone
+    fc-cache \
+    && apt-get clean && rm -rf /var/lib/apt/lists/* \
+	# Wrapper for xvfb
+    && \
+    echo '#!/usr/bin/env sh\n\
+Xvfb :0 -screen 0 1024x768x24 -ac +extension GLX +render -noreset & \n\
+DISPLAY=:0.0 wkhtmltopdf $@ \n\
+killall Xvfb\
+' > /usr/bin/wkhtmltopdf2 && \
+    chmod +x /usr/bin/wkhtmltopdf2
+    
+	
+# Port Setting
+EXPOSE 9000
 
-EXPOSE 9000 27017
-# CMD ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone && /bin/bash /root/run.sh
-CMD /bin/bash /root/run.sh
+# Script
+ENTRYPOINT ["entrypoint.sh"]

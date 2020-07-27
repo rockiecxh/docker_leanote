@@ -18,6 +18,17 @@ if [ ! -d "/data/leanote" ]; then
 fi
 echo -e "\033[32mLeanote is installed \033[0m"
 
+# Check wkhtmltox state
+echo Checking wkhtmltox status...
+if [ ! -d "/wkhtmltox" ]; then
+        echo wkhtmltox is not installed
+        echo wkhtmltox Leanote...
+        tar zxf /data_tmp/wkhtmltox-0.12.4_linux-generic-amd64.tar.gz -C /
+        cp /wkhtmltox/bin/wkhtmltopdf /usr/bin/wkhtmltopdf
+        chmod +x /usr/bin/wkhtmltopdf
+fi
+echo -e "\033[32mLeanote is installed \033[0m"
+
 # Check mongodb data
 echo Checking MongoDB status...
 if [ ! -f "/data/db/.do_not_delete" ]; then
